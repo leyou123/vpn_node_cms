@@ -637,3 +637,31 @@ class NodeClose(View):
                   f"使用流量超过95%"
         dingding_api.dd_send_message(message, "vpnoperator")
         return JsonResponse({"code": 200, "message": "success"})
+
+
+class NodeUpdateBlacklist(View):
+
+    def post(self, request):
+        """
+            更新节点黑名单
+        """
+        # node_ip = "217.69.1.13"
+        # country = "中国"
+
+        node_ip = request.POST.get("node_ip", "")
+        country = request.POST.get("country", "")
+        if not country:
+            return JsonResponse({"code":"404", "message":"Invalid Country Name"})
+        if not node_ip:
+            return JsonResponse({"code":"404", "message":"Invalid Node Ip"})
+
+        node = TrajonNode.objects.filter(ip=node_ip).first()
+        if node.black == "":
+            node.black = country + ","
+        else:
+            if country not in node.black:
+                node.black += country + ","
+            else:
+                return JsonResponse({"code":"404", "message":"已加入黑名单"})
+        node.save()
+        return JsonResponse({"code":"200", "message":"success"})
