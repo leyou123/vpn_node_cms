@@ -656,11 +656,11 @@ class NodeUpdateBlacklist(View):
             return JsonResponse({"code":"404", "message":"Invalid Node Ip"})
 
         node = TrajonNode.objects.filter(ip=node_ip).first()
-        if node.black == "":
-            node.black = country + ","
+        if node.test_black == "":
+            node.test_black = country + ","
         else:
-            if country not in node.black:
-                node.black += country + ","
+            if country not in node.test_black:
+                node.test_black += country + ","
             else:
                 return JsonResponse({"code":"404", "message":"已加入黑名单"})
         node.save()

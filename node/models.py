@@ -189,6 +189,11 @@ class TrajonNode(models.Model):
         (1, "快速"),
     )
 
+    SWITCH_CHOICES = (
+        (1, "开"),
+        (0, "关"),
+    )
+
     id = models.AutoField(primary_key=True, auto_created=True)
     instance_id = models.CharField(u"实例ID", max_length=64, null=True, default=None, blank=True)
     name = models.CharField(u"节点名字", max_length=128, null=True, default=None, blank=True)
@@ -228,6 +233,11 @@ class TrajonNode(models.Model):
     connect_data = models.TextField(u"连接数据", default="", blank=True)
 
     update_time = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+
+    test_white = models.TextField(u"白名单 测试", default="", blank=True, null=True)
+    test_black = models.TextField(u"黑名单 测试", default="", blank=True, null=True)
+
+    hide_switch = models.IntegerField(u"是否隐藏", choices=SWITCH_CHOICES, default=0)
 
     def conv_update_date(self):
         if self.update_time:

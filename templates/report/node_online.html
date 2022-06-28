@@ -1,0 +1,29 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+{% load static %}
+
+{% block content %}
+    <link rel="stylesheet" type="text/css" href="{% static 'report/css/bootstrap.min.css' %}"/>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>国家</th>
+                <th>节点数量</th>
+            </tr>
+
+        </thead>
+        <tbody>
+
+        {% if nodes %}
+            {% for item in nodes %}
+                <tr>
+                    <td>{{ item.country }}</td>
+                    <td>{{ item.total }}</td>
+                </tr>
+            {% endfor %}
+        {% endif %}
+        </tbody>
+    </table>
+
+
+{% endblock %}
