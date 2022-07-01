@@ -90,6 +90,7 @@ class NodeConfig(models.Model):
         (4, "已生成域名"),
         (5, "已生成证书"),
         (6, "正在关闭服务"),
+        (7, "节点测试"),
 
     )
 
@@ -102,6 +103,12 @@ class NodeConfig(models.Model):
     TROJAN_TYPE = (
         (1, "免费线路"),
         (2, "VIP线路"),
+    )
+
+    TEST_STATUS = (
+        (0, "不可用"),
+        (1, "测试通过"),
+        (2, "测试失败"),
     )
 
     id = models.AutoField(primary_key=True, auto_created=True)
@@ -123,6 +130,9 @@ class NodeConfig(models.Model):
     info = models.CharField(u"信息", max_length=255, null=True, default=None, blank=True)
     run_status = models.IntegerField(u"运行状态", default=0, choices=RUN_STATUS)
     update_time = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+
+    test_node = models.BooleanField(u"测试节点", default=0, blank=True, null=True)
+    test_status = models.IntegerField(u"测试状态", default=0, choices=TEST_STATUS, blank=True, null=True)
 
     class Meta:
         verbose_name = '节点配置'
@@ -168,8 +178,9 @@ class NodeConfig(models.Model):
             "national_flag": self.country.national_flag,
             "cert_id":self.ssl_id,
             "cname_validation_p1":self.cname_validation_p1,
-            "cname_validation_p2": self.cname_validation_p2
-
+            "cname_validation_p2": self.cname_validation_p2,
+            "test_node": self.test_node,
+            "test_status": self.test_status
         }
         return obj
 
@@ -232,6 +243,8 @@ class TrajonNode(models.Model):
 
     test_white = models.TextField(u"白名单 测试", default="", blank=True, null=True)
     test_black = models.TextField(u"黑名单 测试", default="", blank=True, null=True)
+    script_status = models.BooleanField(u"脚本状态", default=0, blank=True, null=True)
+
 
     def conv_update_date(self):
         if self.update_time:

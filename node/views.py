@@ -1,6 +1,8 @@
 import json
 import datetime
 import time
+
+from django.core import serializers
 from django.contrib import auth
 from node.models import TrajonNode, NodeConfig
 from django.http import JsonResponse, HttpResponseNotFound
@@ -124,6 +126,16 @@ def get_trajon_node(request):
         nodes.append(i.to_dict())
 
     return JsonResponse({"nodes": nodes}, status=200, json_dumps_params={"ensure_ascii": False})
+
+def get_test_node(request):
+    """
+        获取所有测试节点
+    @param request:
+    @return:
+    """
+    # nodes = TrajonNode.objects.filter(status=3).all()
+    nodes = NodeConfig.objects.filter(test_node=1).values("ip", "id").all()
+    return JsonResponse({"code":200, "message":"success", "nodes": list(nodes)})
 
 
 def node_switch(request):
@@ -639,29 +651,184 @@ class NodeClose(View):
         return JsonResponse({"code": 200, "message": "success"})
 
 
+class NodeUpdate(View):
+
+    def post(self, request):
+        """
+        更新节点状态节点status和script_status为0
+        修改TrajonNode的
+        @param request:
+        @return:
+        """
+        data = json.loads(request.body.decode(encoding="utf-8"))
+        method = data.get("type", "")
+
+        if method == "update":
+            node_id = data.get("node_id", "")
+            if not node_id:
+                return JsonResponse({"code": 404, "message": "data error"})
+
+            node = TrajonNode.objects.filter(id=node_id).first()
+
+            if not node:
+                return JsonResponse({"code": 404, "message": "data error"})
+
+            try:
+                node.status = 0
+                node.script_status = 1
+                node.already_flow = 0
+                node.save()
+            except Exception as e:
+                return JsonResponse({"code": 404, "message": "save data error"})
+            dingding_api = DataLoggerAPI("6543720081", "1mtv8ux938ykgw030vi2tuc3yc201ikr")
+            now_time = get_now_time()
+
+            message = f"{now_time} \r\n" \
+                      f"服务器{node.name} \r\n" \
+                      f"域名:{node.host} \r\n" \
+                      f"状态:关闭  \r\n" \
+                      f"使用流量超过95%"
+            dingding_api.dd_send_message(message, "vpnoperator")
+            return JsonResponse({"code": 200, "message": "success"})
+        elif method == "update_all":
+            """
+                1.获取TrajonNode中所有 status=0 and script_status=1
+                2.修改每个节点的status=1,script_status=0
+            """
+            all_node = TrajonNode.objects.filter(status=0, script_status=1).all()
+            if not all_node:
+                return JsonResponse({"code": 404, "message": "not found TrajonNode"})
+            for node in all_node:
+                try:
+                    node.status = 1
+                    node.script_status = 0
+                    node.save()
+                except Exception as e:
+                    return JsonResponse({"code": 404, "message": "save node data error"})
+
+                dingding_api = DataLoggerAPI("6543720081", "1mtv8ux938ykgw030vi2tuc3yc201ikr")
+                now_time = get_now_time()
+
+                message = f"{now_time} \r\n" \
+                          f"服务器{node.name} \r\n" \
+                          f"域名:{node.host} \r\n" \
+                          f"状态:开启"
+                dingding_api.dd_send_message(message, "vpnoperator")
+            return JsonResponse({"code": 200, "message": "success"})
+
+        return JsonResponse({"code": 404, "message": "not found type"})
+
+
 class NodeUpdateBlacklist(View):
 
     def post(self, request):
         """
             更新节点黑名单
         """
-        # node_ip = "217.69.1.13"
-        # country = "中国"
+        method = request.POST.get("type", "")
+        if not method:
+            return JsonResponse({"code": 404, "message": "invalid type parameter"})
 
         node_ip = request.POST.get("node_ip", "")
         country = request.POST.get("country", "")
         if not country:
-            return JsonResponse({"code":"404", "message":"Invalid Country Name"})
+            return JsonResponse({"code":404, "message":"Invalid Country Name"})
         if not node_ip:
-            return JsonResponse({"code":"404", "message":"Invalid Node Ip"})
+            return JsonResponse({"code":404, "message":"Invalid Node Ip"})
 
         node = TrajonNode.objects.filter(ip=node_ip).first()
-        if node.test_black == "":
-            node.test_black = country + ","
-        else:
-            if country not in node.test_black:
-                node.test_black += country + ","
+        if not node:
+            return JsonResponse({"code": 404, "message": "trajon node not found node"})
+
+        if method == "update":
+            # 添加黑名单
+            try:
+                if node.test_black == "":
+                    node.test_black = country + ","
+                else:
+                    if country not in node.test_black:
+                        node.test_black += country + ","
+                    else:
+                        return JsonResponse({"code": 404, "message": f"[{node_ip}] -- [{country}] 已加入黑名单"})
+                node.save()
+                return JsonResponse({"code": 200, "message": f"[{node_ip}] -- [{country}] 加入黑名单成功！"})
+            except Exception as e:
+                return JsonResponse({"code": 404, "message": e})
+
+        elif method == "remove":
+            # 删除黑名单
+            if country in node.test_black:
+                try:
+                    # "中国,利比亚,加纳,卢森堡,叙利亚,吉布提,埃塞俄比亚,新加坡,比利时,洪都拉斯,突尼斯,缅甸,"
+                    test_black_list = [i for i in node.test_black.split(",") if i != '' and i != country]
+                    test_black_str = ",".join(test_black_list) + ","
+                    node.test_black = test_black_str
+                    node.save()
+                    return JsonResponse({"code": 200, "message": f"[{node_ip}] -- [{country}] 移除黑名单！"})
+                except Exception as e:
+                    return JsonResponse({"code": 404, "message": e})
             else:
-                return JsonResponse({"code":"404", "message":"已加入黑名单"})
-        node.save()
-        return JsonResponse({"code":"200", "message":"success"})
+                # 此国家不在黑名单中
+                return JsonResponse({"code": 404, "message": f"[{node_ip}] not found [{country}]"})
+
+
+        return JsonResponse({"code": 404, "message": "not found type"})
+
+
+class ClearNodeConfig(View):
+
+    def post(self, request):
+        """
+            清空节点配置
+        @param request:
+        @return:
+        """
+        data = json.loads(request.body.decode(encoding="utf-8"))
+        node_id = data.get("id", "")
+        if not node_id:
+            return JsonResponse({"code": 404, "message": "data error"})
+        NodeConfig.objects.filter(id=node_id).update(
+            instance_id="",
+            domain_id="",
+            ssl_id="",
+            domain="",
+            ip="",
+            cname_validation_p1="",
+            cname_validation_p2="",
+            status=0,
+            info="",
+            run_status=0,
+            test_status=0
+        )
+
+        dingding_api = DataLoggerAPI("6543720081", "1mtv8ux938ykgw030vi2tuc3yc201ikr")
+        now_time = get_now_time()
+
+        # message = f"{now_time} \r\n" \
+        #           f"服务器{node.name} \r\n" \
+        #           f"域名:{node.host} \r\n" \
+        #           f"状态:关闭  \r\n" \
+        #           f"使用流量超过95%"
+        # dingding_api.dd_send_message(message, "vpnoperator")
+        return JsonResponse({"code": 200, "message": "success"})
+
+
+class UpdateNodeConfig(View):
+
+    def post(self, request):
+        """
+            更新节点数据
+        @param request:
+        @return:
+        """
+        data = json.loads(request.body.decode(encoding="utf-8"))
+        node_id = data.get("id", "")
+        node_ip = data.get("ip", "")
+        ping_result = data.get("ping_result", "")
+        if not ping_result:
+            return JsonResponse({"code": 404, "message": "data error"})
+
+        NodeConfig.objects.filter(id=node_id).update(
+            test_status=ping_result
+        )
+        return JsonResponse({"code": 200, "message": "success"})

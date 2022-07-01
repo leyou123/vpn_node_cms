@@ -38,10 +38,9 @@
             </tr>
             <tr class="theader">
                 <th>国家</th>
-                <th>节点ip</th>
+                <th>uuid</th>
                 <th>ping成功率</th>
                 <th>连接成功率</th>
-                <th>节点名称</th>
                 <th>日期</th>
             </tr>
 
@@ -86,17 +85,16 @@
                         all_country_connect_total += item.connect_total + item.connect_failed_total;
                         all_country_connect_failed_total += item.connect_failed_total;
                     }
-                    if (item.ping_total = item.ping_failed_total > 0) {
+                    if (item.ping_total + item.ping_failed_total > 0) {
                         ping_rate = item.ping_failed_total / (item.ping_total + item.ping_failed_total) * 100;
                         all_country_ping_total += item.ping_total + item.ping_failed_total;
                         all_country_ping_failed_total += item.ping_total;
                     }
                     var html = "<tr class='country_row'>\n" +
                         "                    <td>"+ item.country +"</td>\n" +
-                        "                    <td>"+ item.node_ip +"</td>\n" +
+                        "                    <td>"+ item.user_uuid +"</td>\n" +
                         "                    <td>"+ ping_rate.toFixed(2) +"%</td>\n" +
                         "                    <td>"+ connect_rate.toFixed(2) +"%</td>\n" +
-                        "                    <td>"+ item.node_name +"</td>\n" +
                         "                    <td>"+ data.results[i].date +"</td>\n" +
                         "                </tr>";
                     $("#tbody_country").append(html);
@@ -122,7 +120,7 @@
                     "start_date":start.format('YYYY-MM-DD'),
                     "end_date":end.format('YYYY-MM-DD'),
                 };
-                _ajax.post("http://54.177.55.54:7000/report/node",data, function(data, status) {
+                _ajax.post("http://54.177.55.54:7000/report/user",data, function(data, status) {
                     updateCountry(data);
                 })
              });

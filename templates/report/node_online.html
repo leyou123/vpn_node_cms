@@ -7,8 +7,11 @@
     <table class="table table-striped">
         <thead>
             <tr>
-                <th>国家</th>
-                <th>节点数量</th>
+                <td colspan="2">节点总数：{{ node_nums }}</td>
+            </tr>
+            <tr>
+                <th>节点ip</th>
+                <th>上线率</th>
             </tr>
 
         </thead>
@@ -17,8 +20,8 @@
         {% if nodes %}
             {% for item in nodes %}
                 <tr>
-                    <td>{{ item.country }}</td>
-                    <td>{{ item.total }}</td>
+                    <td>{{ item.ip }}</td>
+                    <td>{{ item.online }}</td>
                 </tr>
             {% endfor %}
         {% endif %}
