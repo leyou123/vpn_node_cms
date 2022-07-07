@@ -347,11 +347,11 @@ class TrajonNode(models.Model):
         if self.group:
             try:
                 gname = self.group.name
-                gicon = f"https://www.9527.click/static/images/country/orthogon/{self.group.image_url}.png"
+                gicon = f"https://www.9527.click/static/images/country/circle/{self.group.image_url}.png"
             except Exception as e:
                 print("error")
 
-
+        # https://www.9527.click/static/images/country/orthogon/netflix.png
         obj = {
             "id": self.id,
             "name": self.name,

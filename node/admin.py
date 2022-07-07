@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from node.models import TrajonNode, Country, Operator, NodeConfig,Region,InstanceConfig
+from node.models import TrajonNode, Country, Operator, NodeConfig,Region,InstanceConfig, NodeGroup
 
 
 class TrajonNodeAdmin(admin.ModelAdmin):
@@ -29,9 +29,14 @@ class RegionAdmin(admin.ModelAdmin):
 class InstanceConfigAdmin(admin.ModelAdmin):
     list_display = ["name","operator","config"]
 
+
+class NodeGroupAdmin(admin.ModelAdmin):
+    list_display = ['name']
+
 admin.site.register(TrajonNode, TrajonNodeAdmin)
 admin.site.register(Country, CountryAdmin)
 admin.site.register(Operator, OperatorAdmin)
 admin.site.register(NodeConfig, NodeConfigAdmin)
 admin.site.register(Region, RegionAdmin)
 admin.site.register(InstanceConfig, InstanceConfigAdmin)
+admin.site.register(NodeGroup, NodeGroupAdmin)
