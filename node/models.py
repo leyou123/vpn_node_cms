@@ -90,8 +90,7 @@ class NodeConfig(models.Model):
         (4, "已生成域名"),
         (5, "已生成证书"),
         (6, "正在关闭服务"),
-        (7, "节点测试"),
-
+        (9, "节点测试"),
     )
 
     STATUS = (
@@ -185,6 +184,21 @@ class NodeConfig(models.Model):
         return obj
 
 
+class NodeGroup(models.Model):
+    """
+        节点分组
+    """
+
+    name = models.CharField(u"组名称", max_length=128, null=True, default=None, blank=True)
+    image_url = models.CharField(u"icon", max_length=255, null=True, default=None, blank=True)
+
+    class Meta:
+        verbose_name = '节点分组'
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return self.name
+
 class TrajonNode(models.Model):
     """
     节点
@@ -244,6 +258,8 @@ class TrajonNode(models.Model):
     test_white = models.TextField(u"白名单 测试", default="", blank=True, null=True)
     test_black = models.TextField(u"黑名单 测试", default="", blank=True, null=True)
     script_status = models.BooleanField(u"脚本状态", default=0, blank=True, null=True)
+
+    group = models.ForeignKey(NodeGroup, on_delete=models.SET_NULL, verbose_name='节点分组', blank=True, null=True)
 
 
     def conv_update_date(self):
@@ -326,6 +342,16 @@ class TrajonNode(models.Model):
         if self.test_url:
             test_url = self.test_url
 
+        gname = ""
+        gicon = ""
+        if self.group:
+            try:
+                gname = self.group.name
+                gicon = f"https://www.9527.click/static/images/country/orthogon/{self.group.image_url}.png"
+            except Exception as e:
+                print("error")
+
+
         obj = {
             "id": self.id,
             "name": self.name,
@@ -359,7 +385,9 @@ class TrajonNode(models.Model):
             "test_url": test_url,
             "white": self.white,
             "connect_data": self.connect_data,
-            "update_time": self.conv_update_date()
+            "update_time": self.conv_update_date(),
+            "group_name":gname,
+            "group_image":gicon
         }
         return obj
 
