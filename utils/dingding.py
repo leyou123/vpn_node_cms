@@ -422,5 +422,4 @@ if __name__ == "__main__":
     timeStamp = time.time()
     timeArray = time.localtime(timeStamp)
     otherStyleTime = time.strftime("%Y-%m-%d %H:%M:%S", timeArray)
-    # print(api.dd_send_message(f"测试钉钉通知999{otherStyleTime}", "vpnoperator"))
-    print(api.dd_send_message(f"测试钉钉通知999", "vpnoperator"))
+    print(api.dd_send_message(f"测试钉钉通知999{otherStyleTime}", "vpnoperator"))

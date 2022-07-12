@@ -91,6 +91,7 @@ class NodeConfig(models.Model):
         (5, "已生成证书"),
         (6, "正在关闭服务"),
         (9, "节点测试"),
+        (10, "申请失败"),
     )
 
     STATUS = (
@@ -108,6 +109,11 @@ class NodeConfig(models.Model):
         (0, "不可用"),
         (1, "测试通过"),
         (2, "测试失败"),
+    )
+
+    INSTANCE_STATUS = (
+        (0, "正常"),
+        (1, "5次黑名单"),
     )
 
     id = models.AutoField(primary_key=True, auto_created=True)
@@ -132,6 +138,7 @@ class NodeConfig(models.Model):
 
     test_node = models.BooleanField(u"测试节点", default=0, blank=True, null=True)
     test_status = models.IntegerField(u"测试状态", default=0, choices=TEST_STATUS, blank=True, null=True)
+    instance_status = models.IntegerField(u"测试状态", default=0, choices=INSTANCE_STATUS, blank=True, null=True)
 
     class Meta:
         verbose_name = '节点配置'
@@ -417,3 +424,19 @@ class TrajonNode(models.Model):
 
         super().save(*args, **kwargs)
 
+
+class InstanceDel(models.Model):
+    """
+        已删除的实例
+    """
+
+    instance_id = models.CharField(u"实例id", max_length=128, db_index=True, unique=True)
+    main_ip = models.CharField(u"ip", max_length=128, null=True, default=None, blank=True, db_index=True)
+
+    class Meta:
+        verbose_name = '实例配置'
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        name = f"实例id：【{self.instance_id}】 -----  ip:【{self.main_ip}】"
+        return name

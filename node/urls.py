@@ -1,6 +1,6 @@
 from django.urls import path
 from node.views import ConnectStatus, GetConfig, UploadConfig, UploadInfo, ClearServers,DelServers,NodeClose
-from node.views import NodeUpdateBlacklist, NodeUpdate, ClearNodeConfig, UpdateNodeConfig
+from node.views import NodeUpdateBlacklist, NodeUpdate, ClearNodeConfig, UpdateNodeConfig, InstanceDelView
 
 urlpatterns = [
     # path('connect_status', ConnectStatus.as_view(), name="connect_status"),
@@ -13,6 +13,7 @@ urlpatterns = [
     path('Node_update', NodeUpdate.as_view(), name="Node_update"),
 
     path('node_update_blacklist', NodeUpdateBlacklist.as_view(), name="node_update_blacklist"),
+    path('instanceDel', InstanceDelView.as_view(), name="instanceDel"),
     path('clear_nodeconfig', ClearNodeConfig.as_view(), name="clear_nodeconfig"),
     path('update_nodeconfig', UpdateNodeConfig.as_view(), name="update_nodeconfig"),
 

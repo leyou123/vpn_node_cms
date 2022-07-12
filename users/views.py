@@ -364,10 +364,7 @@ class CreateSingleUser(View):
             return JsonResponse({"code": 404, "message": "not found ip"})
 
         trojan = Trojan()
-        if ip == "95.174.68.135":
-            data = trojan.cover_trojan_config(ip, password)
-        else:
-            data = trojan.execute_single(ip, password)
+        data = trojan.execute_single(ip, password)
         if "already exist" in data or "Done" in data:
             return JsonResponse({"code": 200, "message": "success", "data": data})
         else:

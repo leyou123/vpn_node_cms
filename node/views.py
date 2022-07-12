@@ -2,13 +2,13 @@ import json
 import datetime
 import time
 
-from django.core import serializers
 from django.contrib import auth
-from node.models import TrajonNode, NodeConfig
+from node.models import TrajonNode, NodeConfig, InstanceDel
 from django.http import JsonResponse, HttpResponseNotFound
 from utils.dingding import DataLoggerAPI
 from django.views.generic.base import View
 
+from report.models import NodeBlack
 
 def get_now_time():
     timeStamp = time.time()
@@ -134,7 +134,7 @@ def get_test_node(request):
     @return:
     """
     # nodes = TrajonNode.objects.filter(status=3).all()
-    nodes = NodeConfig.objects.filter(test_node=1).values("ip", "id").all()
+    nodes = NodeConfig.objects.filter(test_node=1, test_status=0).values("ip", "name").all()
     return JsonResponse({"code":200, "message":"success", "nodes": list(nodes)})
 
 
@@ -463,6 +463,7 @@ class UploadConfig(View):
         complete_ssl = 5
         succeed = 6
         clear_ssl = 7
+        test_node = 9
 
 
         config_id = data.get("id", "")
@@ -541,6 +542,23 @@ class UploadConfig(View):
             )
             if node_res:
                 return JsonResponse({"code": 200, "message": "success"})
+
+        if run_status == test_node:
+            if cert_id:
+                node_res = NodeConfig.objects.filter(id=config_id).update(
+                    ssl_id=cert_id,
+                    cname_validation_p1=cname_validation_p1,
+                    cname_validation_p2=cname_validation_p2
+                )
+                if node_res:
+                    return JsonResponse({"code": 200, "message": "success"})
+            else:
+                node_res = NodeConfig.objects.filter(id=config_id).update(
+                    run_status=run_status
+                )
+                if node_res:
+                    return JsonResponse({"code": 200, "message": "success"})
+
 
         return JsonResponse({"code": 404, "message": "submit error"})
 
@@ -645,8 +663,8 @@ class NodeClose(View):
         message = f"{now_time} \r\n" \
                   f"服务器{node.name} \r\n" \
                   f"域名:{node.host} \r\n" \
-                  f"状态:关闭  \r\n" \
-                  f"使用流量超过95%"
+                  f"状态:删除"
+                  # f"使用流量超过95%"
         dingding_api.dd_send_message(message, "vpnoperator")
         return JsonResponse({"code": 200, "message": "success"})
 
@@ -685,7 +703,7 @@ class NodeUpdate(View):
 
             message = f"{now_time} \r\n" \
                       f"服务器{node.name} \r\n" \
-                      f"域名:{node.host} \r\n" \
+                      f"IP:{node.ip} \r\n" \
                       f"状态:关闭  \r\n" \
                       f"使用流量超过95%"
             dingding_api.dd_send_message(message, "vpnoperator")
@@ -721,11 +739,47 @@ class NodeUpdate(View):
 
 class NodeUpdateBlacklist(View):
 
+    def update_blacklist(self, black_text, country):
+
+        # 添加黑名单
+        try:
+            if black_text == "":
+                black_text = country + ","
+            else:
+                if country not in black_text:
+                    black_text += country + ","
+                else:
+                    return black_text, False
+            return black_text, True
+        except Exception as e:
+            return black_text, False
+
+    def remove_blacklist(self, black_text, country):
+
+        if country in black_text:
+            try:
+                # "中国,利比亚,加纳,卢森堡,叙利亚,吉布提,埃塞俄比亚,新加坡,比利时,洪都拉斯,突尼斯,缅甸,"
+                test_black_list = [i for i in black_text.split(",") if i != '' and i != country]
+                test_black_str = ",".join(test_black_list) + ","
+                black_text = test_black_str
+                return black_text, True
+            except Exception as e:
+                return black_text, False
+        else:
+            # 此国家不在黑名单中
+            return black_text, False
+
     def post(self, request):
         """
             更新节点黑名单
         """
+        # "black_flag": black_flag,
+        # "test_black_flag": test_black_flag
         method = request.POST.get("type", "")
+        black_flag = request.POST.get("black_flag", "")
+        test_black_flag = request.POST.get("test_black_flag", "")
+        if not black_flag and not test_black_flag:
+            return JsonResponse({"code": 404, "message": "check_all_node api close"})
         if not method:
             return JsonResponse({"code": 404, "message": "invalid type parameter"})
 
@@ -742,34 +796,96 @@ class NodeUpdateBlacklist(View):
 
         if method == "update":
             # 添加黑名单
+            if black_flag:
+                black_str, black_flag = self.update_blacklist(node.black, country)
+                node.black = black_str
+
+            if test_black_flag:
+                black_str, test_black_flag = self.update_blacklist(node.test_black, country)
+                node.test_black = black_str
+
             try:
-                if node.test_black == "":
-                    node.test_black = country + ","
+                if test_black_flag or black_flag:
+                    node.save()
+
+                node_name = request.POST.get("node_name", "")
+                ping_rate = request.POST.get("ping_rate", "")
+                connect_rate = request.POST.get("connect_rate", "")
+                black = NodeBlack.objects.filter(node_ip=node_ip, country=country).first()
+                if black:
+                    black.node_name = node_name
+                    black.ping_rate = float(ping_rate)
+                    black.connect_rate = float(connect_rate)
+                    black.save()
                 else:
-                    if country not in node.test_black:
-                        node.test_black += country + ","
-                    else:
-                        return JsonResponse({"code": 404, "message": f"[{node_ip}] -- [{country}] 已加入黑名单"})
-                node.save()
+                    NodeBlack.objects.create(
+                        node_ip=node_ip,
+                        country=country,
+                        node_name=node_name,
+                        ping_rate=float(ping_rate),
+                        connect_rate=float(connect_rate)
+                    )
                 return JsonResponse({"code": 200, "message": f"[{node_ip}] -- [{country}] 加入黑名单成功！"})
             except Exception as e:
-                return JsonResponse({"code": 404, "message": e})
+                return JsonResponse({"code": 404, "message": "save data error"})
+            # try:
+            #     if node.test_black == "":
+            #         node.test_black = country + ","
+            #     else:
+            #         if country not in node.test_black:
+            #             node.test_black += country + ","
+            #         else:
+            #             return JsonResponse({"code": 404, "message": f"[{node_ip}] -- [{country}] 已加入黑名单"})
+            #     node.save()
+            #     return JsonResponse({"code": 200, "message": f"[{node_ip}] -- [{country}] 加入黑名单成功！"})
+            # except Exception as e:
+            #     return JsonResponse({"code": 404, "message": e})
 
         elif method == "remove":
             # 删除黑名单
-            if country in node.test_black:
-                try:
-                    # "中国,利比亚,加纳,卢森堡,叙利亚,吉布提,埃塞俄比亚,新加坡,比利时,洪都拉斯,突尼斯,缅甸,"
-                    test_black_list = [i for i in node.test_black.split(",") if i != '' and i != country]
-                    test_black_str = ",".join(test_black_list) + ","
-                    node.test_black = test_black_str
+            if black_flag:
+                black_str, black_flag = self.remove_blacklist(node.black, country)
+                node.black = black_str
+            if test_black_flag:
+                black_str, test_black_flag = self.remove_blacklist(node.test_black, country)
+                node.test_black = black_str
+            try:
+                if test_black_flag or black_flag:
                     node.save()
-                    return JsonResponse({"code": 200, "message": f"[{node_ip}] -- [{country}] 移除黑名单！"})
-                except Exception as e:
-                    return JsonResponse({"code": 404, "message": e})
-            else:
-                # 此国家不在黑名单中
-                return JsonResponse({"code": 404, "message": f"[{node_ip}] not found [{country}]"})
+                # NodeBlack.objects.filter(node_ip=node_ip, country=country).delete()
+                node_name = request.POST.get("node_name", "")
+                ping_rate = request.POST.get("ping_rate", "")
+                connect_rate = request.POST.get("connect_rate", "")
+                black = NodeBlack.objects.filter(node_ip=node_ip, country=country).first()
+                if black:
+                    black.node_name = node_name
+                    black.ping_rate = float(ping_rate)
+                    black.connect_rate = float(connect_rate)
+                    black.save()
+                else:
+                    NodeBlack.objects.create(
+                        node_ip=node_ip,
+                        country=country,
+                        node_name=node_name,
+                        ping_rate=float(ping_rate),
+                        connect_rate=float(connect_rate)
+                    )
+                return JsonResponse({"code": 200, "message": f"[{node_ip}] -- [{country}] 移除黑名单！"})
+            except Exception as e:
+                return JsonResponse({"code": 404, "message": "save data error"})
+            # if country in node.test_black:
+            #     try:
+            #         # "中国,利比亚,加纳,卢森堡,叙利亚,吉布提,埃塞俄比亚,新加坡,比利时,洪都拉斯,突尼斯,缅甸,"
+            #         test_black_list = [i for i in node.test_black.split(",") if i != '' and i != country]
+            #         test_black_str = ",".join(test_black_list) + ","
+            #         node.test_black = test_black_str
+            #         node.save()
+            #         return JsonResponse({"code": 200, "message": f"[{node_ip}] -- [{country}] 移除黑名单！"})
+            #     except Exception as e:
+            #         return JsonResponse({"code": 404, "message": e})
+            # else:
+            #     # 此国家不在黑名单中
+            #     return JsonResponse({"code": 404, "message": f"[{node_ip}] not found [{country}]"})
 
 
         return JsonResponse({"code": 404, "message": "not found type"})
@@ -822,13 +938,69 @@ class UpdateNodeConfig(View):
         @return:
         """
         data = json.loads(request.body.decode(encoding="utf-8"))
-        node_id = data.get("id", "")
-        node_ip = data.get("ip", "")
-        ping_result = data.get("ping_result", "")
-        if not ping_result:
+        test_results = data.get("test_results", [])
+        if not test_results:
             return JsonResponse({"code": 404, "message": "data error"})
 
-        NodeConfig.objects.filter(id=node_id).update(
-            test_status=ping_result
-        )
+        for item in test_results:
+
+            node_id = item.get("id", "")
+            ping_result = item.get("ping_result", "")
+            if not ping_result:
+                return JsonResponse({"code": 404, "message": "data error"})
+            if not node_id:
+                return JsonResponse({"code": 404, "message": "data error"})
+            try:
+                NodeConfig.objects.filter(id=node_id).update(
+                    test_status=ping_result
+                )
+            except Exception as e:
+                return JsonResponse({"code": 404, "message": f"update node config error:{e}"})
+        return JsonResponse({"code": 200, "message": "success"})
+
+
+class InstanceDelView(View):
+
+    def get(self, request):
+        """
+            根据ip查询此ip是否存在
+        @param request:
+        @return:
+        """
+        ip = request.GET.get("ip", "")
+        instance = InstanceDel.objects.filter(main_ip=ip).first()
+        if instance:
+            return JsonResponse({"code":200, "message":"success", "status":True})
+        else:
+            return JsonResponse({"code":404, "message":"not found instance ip", "status":False})
+
+    def put(self, request):
+        """
+            修改节点配置的实例状态和运行状态
+        @param request:
+        @return:
+        """
+        data = json.loads(request.body.decode(encoding="utf-8"))
+        config = NodeConfig.objects.filter(old_instance_id=data.get("old_instance_id", "")).first()
+        if config:
+            config.instance_status = 1
+            config.run_status = 10
+            config.save()
+            return JsonResponse({"code":200, "message":"success"})
+        return JsonResponse({"code":404, "message":"not found old instance id"})
+
+    def post(self, request):
+        """
+            记录已删除的实例信息
+        @return:
+        """
+        data = json.loads(request.body.decode(encoding="utf-8"))
+        instance_id = data.get("instance_id", "")
+        ip = data.get("ip", "")
+        instance = InstanceDel.objects.filter(instance_id=instance_id).first()
+        if not instance:
+            InstanceDel.objects.create(
+                instance_id=instance_id,
+                main_ip=ip
+            )
         return JsonResponse({"code": 200, "message": "success"})
