@@ -144,7 +144,7 @@ class Trojan(object):
                     modify_data = modify_results[0]
 
         except Exception as e:
-            print(e)
+            print("read cms result error :",e)
         client.close()
         # print(host,password,f"结果:{data}")
         return data

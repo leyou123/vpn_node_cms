@@ -19,7 +19,7 @@ from django.urls import path, re_path,include
 from django.views.static import serve
 
 from node.views import get_trajon_node, node_status, trojan_node_status, trojan_node_network_status, add_node,node_switch,get_all_node
-from node.views import del_node,modify_node,get_netflix_node,ConnectStatus
+from node.views import del_node,modify_node,get_netflix_node,ConnectStatus, get_test_node
 from node_manage import settings
 
 urlpatterns = [
@@ -29,6 +29,7 @@ urlpatterns = [
 
     path('node_status', trojan_node_status),
     path('get_trajon_node', get_trajon_node),
+    path('get_test_node', get_test_node),
     path('get_all_node', get_all_node),
     path('delete_node', del_node),
     path('modify_node', modify_node),
@@ -38,5 +39,6 @@ urlpatterns = [
     path('trojan_node_network_status', trojan_node_network_status),
     path('user/', include('users.urls'), name="user"),
     path('node/', include('node.urls'), name="node"),
-    re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
+    path('report/', include('report.urls'), name="report"),
+    # re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
 ]

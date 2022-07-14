@@ -221,7 +221,6 @@ class TrajonNode(models.Model):
         (1, "快速"),
     )
 
-
     id = models.AutoField(primary_key=True, auto_created=True)
     instance_id = models.CharField(u"实例ID", max_length=64, null=True, default=None, blank=True)
     name = models.CharField(u"节点名字", max_length=128, null=True, default=None, blank=True)
@@ -237,7 +236,7 @@ class TrajonNode(models.Model):
     network_recv = models.CharField(u"接受流量带宽(单位:MB)", max_length=64, null=True, default=None, blank=True)
     already_flow = models.CharField(u"已使用流量(单位:GB)", max_length=64, null=True, default=None, blank=True)
 
-    download = models.CharField(u"上传测速(单位:MB)", max_length=64, default="", blank=True)
+    download = models.CharField(u"下载测速(单位:MB)", max_length=64, default="", blank=True)
     upload = models.CharField(u"上传测速(单位:MB)", max_length=64, default="", blank=True)
     ping = models.CharField(u"ping值(单位:ms)", max_length=64, default="", blank=True)
     total_flow = models.CharField(u"总流量(单位:GB)", max_length=64, null=True, default=None, blank=True)
@@ -264,7 +263,6 @@ class TrajonNode(models.Model):
 
     test_white = models.TextField(u"白名单 测试", default="", blank=True, null=True)
     test_black = models.TextField(u"黑名单 测试", default="", blank=True, null=True)
-    script_status = models.BooleanField(u"脚本状态", default=0, blank=True, null=True)
 
     group = models.ForeignKey(NodeGroup, on_delete=models.SET_NULL, verbose_name='节点分组', blank=True, null=True)
 
@@ -311,7 +309,6 @@ class TrajonNode(models.Model):
         except Exception as e:
             print(e)
             return 0
-
 
     def use_flow_rate(self):
         use_flow_rate = 0

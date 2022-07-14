@@ -641,6 +641,7 @@ class NodeClose(View):
 
         if not node:
             return JsonResponse({"code": 404, "message": "data error"})
+        msg = data.get("message", "")
 
         TrajonNode.objects.filter(instance_id=instance_id).delete()
         NodeConfig.objects.filter(instance_id=instance_id).update(
@@ -659,82 +660,19 @@ class NodeClose(View):
 
         dingding_api = DataLoggerAPI("6543720081", "1mtv8ux938ykgw030vi2tuc3yc201ikr")
         now_time = get_now_time()
-
-        message = f"{now_time} \r\n" \
-                  f"服务器{node.name} \r\n" \
-                  f"域名:{node.host} \r\n" \
-                  f"状态:删除"
-                  # f"使用流量超过95%"
-        dingding_api.dd_send_message(message, "vpnoperator")
-        return JsonResponse({"code": 200, "message": "success"})
-
-
-class NodeUpdate(View):
-
-    def post(self, request):
-        """
-        更新节点状态节点status和script_status为0
-        修改TrajonNode的
-        @param request:
-        @return:
-        """
-        data = json.loads(request.body.decode(encoding="utf-8"))
-        method = data.get("type", "")
-
-        if method == "update":
-            node_id = data.get("node_id", "")
-            if not node_id:
-                return JsonResponse({"code": 404, "message": "data error"})
-
-            node = TrajonNode.objects.filter(id=node_id).first()
-
-            if not node:
-                return JsonResponse({"code": 404, "message": "data error"})
-
-            try:
-                node.status = 0
-                node.script_status = 1
-                node.already_flow = 0
-                node.save()
-            except Exception as e:
-                return JsonResponse({"code": 404, "message": "save data error"})
-            dingding_api = DataLoggerAPI("6543720081", "1mtv8ux938ykgw030vi2tuc3yc201ikr")
-            now_time = get_now_time()
-
+        if msg:
             message = f"{now_time} \r\n" \
                       f"服务器{node.name} \r\n" \
                       f"IP:{node.ip} \r\n" \
-                      f"状态:关闭  \r\n" \
-                      f"使用流量超过95%"
-            dingding_api.dd_send_message(message, "vpnoperator")
-            return JsonResponse({"code": 200, "message": "success"})
-        elif method == "update_all":
-            """
-                1.获取TrajonNode中所有 status=0 and script_status=1
-                2.修改每个节点的status=1,script_status=0
-            """
-            all_node = TrajonNode.objects.filter(status=0, script_status=1).all()
-            if not all_node:
-                return JsonResponse({"code": 404, "message": "not found TrajonNode"})
-            for node in all_node:
-                try:
-                    node.status = 1
-                    node.script_status = 0
-                    node.save()
-                except Exception as e:
-                    return JsonResponse({"code": 404, "message": "save node data error"})
-
-                dingding_api = DataLoggerAPI("6543720081", "1mtv8ux938ykgw030vi2tuc3yc201ikr")
-                now_time = get_now_time()
-
-                message = f"{now_time} \r\n" \
-                          f"服务器{node.name} \r\n" \
-                          f"域名:{node.host} \r\n" \
-                          f"状态:开启"
-                dingding_api.dd_send_message(message, "vpnoperator")
-            return JsonResponse({"code": 200, "message": "success"})
-
-        return JsonResponse({"code": 404, "message": "not found type"})
+                      f"状态:删除 \r\n" \
+                      f"{msg}"
+        else:
+            message = f"{now_time} \r\n" \
+                      f"服务器{node.name} \r\n" \
+                      f"IP:{node.ip} \r\n" \
+                      f"状态:删除"
+        dingding_api.dd_send_message(message, "vpnoperator")
+        return JsonResponse({"code": 200, "message": "success"})
 
 
 class NodeUpdateBlacklist(View):

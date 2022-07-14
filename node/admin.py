@@ -6,7 +6,7 @@ from node.models import TrajonNode, Country, Operator, NodeConfig,Region,Instanc
 class TrajonNodeAdmin(admin.ModelAdmin):
     list_display = (
     'name', 'ip', 'host', "port", "node_type", "country", 'connected', 'quick_access', 'cnt', 'description', 'tag',
-    "status", "script_status", "update_time")
+    "status", "update_time")
 
 
 class CountryAdmin(admin.ModelAdmin):
