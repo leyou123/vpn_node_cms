@@ -138,7 +138,7 @@ class NodeConfig(models.Model):
 
     test_node = models.BooleanField(u"测试节点", default=0, blank=True, null=True)
     test_status = models.IntegerField(u"测试状态", default=0, choices=TEST_STATUS, blank=True, null=True)
-    instance_status = models.IntegerField(u"测试状态", default=0, choices=INSTANCE_STATUS, blank=True, null=True)
+    instance_status = models.IntegerField(u"实例状态", default=0, choices=INSTANCE_STATUS, blank=True, null=True)
 
     class Meta:
         verbose_name = '节点配置'
@@ -175,6 +175,7 @@ class NodeConfig(models.Model):
             "region": self.region.english_name,
             "region_id": self.region.region,
             "domain": domain,
+            "domain_id": self.domain_id,
             "name": self.name,
             "ip": ip,
             "node_type":self.node_type,
@@ -285,7 +286,7 @@ class TrajonNode(models.Model):
             already_flow = float(self.already_flow)
             total_flow = float(self.total_flow)
             flow = round(already_flow / total_flow, 2)
-            if flow >= 0.95:
+            if flow >= 0.98:
                 print("流量")
                 return -40
 
@@ -299,10 +300,8 @@ class TrajonNode(models.Model):
 
             user = self.connected
             # print(f"ip:{self.ip},cpu:{cpu},mem:{mem},flow:{flow}")
-            recommended_value = (2 - cpu * 1.3 - mem * 1.3 - 0.5 * flow) * 80 + self.cnt - user
-            # recommended_value = (2 - cpu * 1.3 - mem * 1.3 - 0.5 * flow) * 80 + self.cnt - self.connected
-            # recommended_value = (1 - cpu) * 10 + (1 - mem) * 10 + (1 - flow) * 10 + (
-            #             1 - user / self.max_user_connected) * 50 + self.cnt
+            # recommended_value = (2 - cpu * 1.3 - mem * 1.3 - 0.5 * flow) * 80 + self.cnt - user
+            recommended_value = (1 - cpu * 0.35 - mem * 0.15 - 0.15 * flow - user / 300 * 0.4) * 94 + self.cnt
 
             # recommended_value = download*0.5+upload*0.3+int((1 - cpu) * 20 + (1 - mem) * 20 + (1 - bandwidth) * 10 +(1 - user / self.max_user_connected) * 50) + self.cnt
             return int(recommended_value)
